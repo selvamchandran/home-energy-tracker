@@ -1,0 +1,43 @@
+package com.selvam.deviceservice.aspect;
+
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+
+import java.util.concurrent.TimeUnit;
+
+@Aspect
+@Component
+@Slf4j
+public class ExecutionTimeAspect {
+
+    @Pointcut("execution(* com.selvam.deviceservice.controller.*.*(..))")
+    public void controllerMethods() {
+    }
+
+    @Before("controllerMethods()")
+    public Object measureExecutionTime(ProceedingJoinPoint pjp) throws Throwable {
+        long start = System.nanoTime();
+        try {
+            return pjp.proceed();
+        } finally {
+            long end = System.nanoTime();
+            long elapsedNs = end - start;
+            long elapsedMs = TimeUnit.NANOSECONDS.toMillis(elapsedNs);
+            String signature = pjp.getSignature().toShortString();
+            log.info("Controller method: {} executed in {} ms",
+                    signature, elapsedMs);
+        }
+    }
+
+    @AfterReturning(pointcut = "serviceMethods()", returning = "result")
+    public void logAfterReturning(JoinPoint joinPoint, Object result) {
+        log.info("Service method: {} returned: {}",
+                joinPoint.getSignature().getName(), result);
+    }
+}
